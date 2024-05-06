@@ -5,8 +5,8 @@ import 'package:flutter/material.dart';
 
 import 'cards/nowcard.dart';
 import 'components/beachcam_background.dart';
+import 'components/camera_selector.dart';
 import 'components/forecast_widget.dart';
-import 'components/shot_select_widget.dart';
 import 'data/camera_shot.dart';
 import 'services/beachcam.dart';
 import 'services/surfguru.dart';
@@ -105,7 +105,7 @@ class _SurfPageState extends State<SurfPage> {
   /// Refreshes all information from surfguru and beachcam
   /// Todo: Consider making the individual widgets refresh themselves
   void _refreshInfo() {
-    BeachCamService().getShot(selectedCameraShot.name).then((value) {
+    BeachCamService().getShotByName(selectedCameraShot.name).then((value) {
       setState(() => selectedCameraShot = value);
     });
 
@@ -173,8 +173,7 @@ class _SurfPageState extends State<SurfPage> {
                         Positioned(
                           top: 0,
                           left: 0,
-                          child: CameraShotSelectionWrapper(
-                            future: availableCameraShots,
+                          child: CameraShotSelector(
                             notifier: cameraShotNotifier,
                           ),
                         ),

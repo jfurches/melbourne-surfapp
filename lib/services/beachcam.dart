@@ -44,16 +44,12 @@ class BeachCamService {
   /// panoramic images. It also prefers images that were more
   /// recently updated on the website, as it reflects the current
   /// conditions. See [rankShots] for more details.
-  Future<CameraShot> pickBestShot() async {
-    if (shouldRefresh()) {
-      await _refresh();
-    }
-
-    return rankShots(_cameraShots).first;
+  CameraShot pickBestShot(List<CameraShot> shots) {
+    return rankShots(shots).first;
   }
 
   /// Gets a camera shot by name, refreshing if necessary.
-  Future<CameraShot> getShot(String name) async {
+  Future<CameraShot> getShotByName(String name) async {
     if (shouldRefresh()) {
       await _refresh();
     }
@@ -63,7 +59,7 @@ class BeachCamService {
     }
 
     if (name.toLowerCase() == "auto") {
-      return await pickBestShot();
+      return pickBestShot(_cameraShots);
     }
 
     return _cameraShots.firstWhere((element) => element.name == name);

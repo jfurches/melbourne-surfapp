@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:math';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
+import 'package:surfapp/animation/springdrag.dart';
 
 class PanoramicBackground extends StatefulWidget {
   final Image image;
@@ -14,26 +16,35 @@ class PanoramicBackground extends StatefulWidget {
   State<PanoramicBackground> createState() => _PanoramicBackgroundState();
 }
 
-// Todo: add vsync
-class _PanoramicBackgroundState extends State<PanoramicBackground> {
+class _PanoramicBackgroundState extends State<PanoramicBackground>
+    with SingleTickerProviderStateMixin {
   Completer<ui.Image> imageCompleter = Completer<ui.Image>();
   ui.Image? image;
-  double displacement = 0;
-  double momentum = 0;
-  late Timer ticker;
+  late Ticker ticker;
   final canvasKey = GlobalKey();
+  final SpringDragListener _dragListener = SpringDragListener(
+    spring: SpringDescription.withDampingRatio(
+      mass: 1.0,
+      stiffness: 1.0,
+      ratio: 1.0,
+    ),
+  );
+
+  double displacement = 0;
 
   @override
   Widget build(BuildContext context) {
-    if (isReady) {
+    if (isReady && image != null) {
       return GestureDetector(
-        onHorizontalDragUpdate: (details) => onDrag(-details.delta.dx),
+        onHorizontalDragStart: onDragStart,
+        onHorizontalDragUpdate: onDragUpdate,
+        onHorizontalDragEnd: onDragEnd,
         child: CustomPaint(
           key: canvasKey,
           size: MediaQuery.sizeOf(context),
           painter: PanoramicBackgroundPainter(
             image!,
-            displacement: displacement.toDouble(),
+            displacement: displacement,
           ),
         ),
       );
@@ -46,27 +57,30 @@ class _PanoramicBackgroundState extends State<PanoramicBackground> {
 
   bool get isReady => imageCompleter.isCompleted;
 
-  void onDrag(double dx) {
+  void onDragUpdate(DragUpdateDetails details) {
     if (widget.touchEnabled) {
-      momentum += min(0.0005 * dx, 0.05);
+      _dragListener.onDragUpdate(details);
+    }
+  }
+
+  void onDragStart(DragStartDetails details) {
+    if (widget.touchEnabled) {
+      _dragListener.onDragStart(details);
+    }
+  }
+
+  void onDragEnd(DragEndDetails details) {
+    if (widget.touchEnabled) {
+      _dragListener.onDragEnd(details);
     }
   }
 
   void updatePosition() {
-    if (momentum == 0) {
-      return;
+    var newDisplacement = _dragListener.x.clamp(0.0, 1.0);
+
+    if (newDisplacement != displacement) {
+      setState(() => displacement = newDisplacement);
     }
-
-    var newDisplacement = displacement + momentum;
-    newDisplacement = newDisplacement.clamp(0, 1);
-    setState(() => displacement = newDisplacement);
-
-    if (momentum.abs() < 0.01) {
-      momentum = 0;
-      return;
-    }
-
-    momentum -= momentum * 0.2;
   }
 
   @override
@@ -83,14 +97,15 @@ class _PanoramicBackgroundState extends State<PanoramicBackground> {
     imageCompleter = completer;
     completer.future.then((value) => setState(() => image = value));
 
-    ticker = Timer.periodic(const Duration(milliseconds: 16), (timer) {
+    ticker = createTicker((elapsed) {
       updatePosition();
     });
+    ticker.start();
   }
 
   @override
   void dispose() {
-    ticker.cancel();
+    ticker.dispose();
     super.dispose();
   }
 }
