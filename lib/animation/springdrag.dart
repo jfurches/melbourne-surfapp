@@ -69,7 +69,8 @@ class SpringDragListener {
   void onDragUpdate(DragUpdateDetails details) {
     // Set the velocity
     var dt = (DateTime.now().difference(_lastTime)).inMilliseconds / 1000.0;
-    _v = -details.delta.dx / dt / 1000; // minus sign to orient properly
+    _v = 0.5 * _v +
+        0.5 * -details.delta.dx / dt / 1000; // minus sign to orient properly
     _v = _v.clamp(-0.5, 0.5);
     _lastTime = DateTime.now();
   }
@@ -79,7 +80,7 @@ class SpringDragListener {
       _resetSimulation();
     }
 
-    var v = -(details.primaryVelocity ?? 0) / 1000;
+    var v = 0.5 * _v + 0.5 * -(details.primaryVelocity ?? 0) / 1000;
     v = v.clamp(-0.5, 0.5);
     // var ds = v / sqrt(spring.mass / spring.stiffness);
     var ds = v * const Duration(seconds: 1).inMilliseconds / 1000;
