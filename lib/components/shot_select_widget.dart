@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:surfapp/util.dart';
 
+import '../data/camera_shot.dart';
 import '../services/beachcam.dart';
 
 class CameraShotSelection extends StatefulWidget {
@@ -85,7 +87,8 @@ class CameraShotSelectionState extends State<CameraShotSelection> {
                             if (states.contains(MaterialState.hovered)) {
                               return Theme.of(context).colorScheme.surface;
                             }
-                            return null;
+                            // return null;
+                            return Theme.of(context).colorScheme.surface;
                           }),
                         ),
                         child: Text(
@@ -95,8 +98,9 @@ class CameraShotSelectionState extends State<CameraShotSelection> {
                             color: Theme.of(context).colorScheme.inverseSurface,
                           ),
                         ),
-                      ),
+                      ) as Widget,
                     )
+                    .interleaving(const SizedBox(height: 5))
                     .toList(),
               ),
             ],
@@ -117,6 +121,10 @@ class CameraShotSelectionState extends State<CameraShotSelection> {
 
   List<CameraShot> getChoices() {
     List<CameraShot> choices = [];
+
+    if (!selectedShot.isAuto) {
+      choices.add(CameraShot.auto);
+    }
 
     var now = DateTime.now();
     for (var shot in widget.shots) {

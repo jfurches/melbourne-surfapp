@@ -7,6 +7,7 @@ import 'cards/nowcard.dart';
 import 'components/beachcam_background.dart';
 import 'components/forecast_widget.dart';
 import 'components/shot_select_widget.dart';
+import 'data/camera_shot.dart';
 import 'services/beachcam.dart';
 import 'services/surfguru.dart';
 import 'themes.dart';
@@ -138,45 +139,52 @@ class _SurfPageState extends State<SurfPage> {
     return Scaffold(
       body: GestureDetector(
         onTap: _onTouch,
-        child: BeachCamBackground(
-          shot: selectedCameraShot,
-          touchEnabled: uiState.isTouchEnabled,
-          child: Stack(
-            children: [
-              // Forecast UI
-              AnimatedOpacity(
-                opacity: uiState == UiState.forecast ? 1.0 : 0.0,
-                duration: const Duration(milliseconds: 300),
-                child: BeachForecastWidgetWrapper(future: forecastFuture),
-              ),
-              // Ambient UI
-              Container(
-                padding: const EdgeInsets.all(50.0),
-                child: AnimatedOpacity(
-                  opacity: uiState == UiState.ambient ? 1.0 : 0.0,
-                  duration: const Duration(milliseconds: 300),
-                  child: Stack(
-                    children: [
-                      // Current conditions card
-                      Positioned(
-                        bottom: 0,
-                        left: 0,
-                        child: NowCardWrapper(future: conditionsFuture),
-                      ),
-                      Positioned(
-                        top: 0,
-                        left: 0,
-                        child: CameraShotSelectionWrapper(
-                          future: availableCameraShots,
-                          notifier: cameraShotNotifier,
+        child: Stack(
+          children: [
+            BeachCamBackground(
+              shot: selectedCameraShot,
+              touchEnabled: uiState.isTouchEnabled,
+            ),
+            // Forecast UI
+            AnimatedOpacity(
+              opacity: uiState == UiState.forecast ? 1.0 : 0.0,
+              duration: const Duration(milliseconds: 300),
+              child: BeachForecastWidgetWrapper(future: forecastFuture),
+            ),
+            // Ambient UI
+            Visibility(
+              maintainState: true,
+              // maintainAnimation: true,
+              child: AbsorbPointer(
+                absorbing: uiState != UiState.ambient,
+                child: Container(
+                  padding: const EdgeInsets.all(50.0),
+                  child: AnimatedOpacity(
+                    opacity: uiState == UiState.ambient ? 1.0 : 0.0,
+                    duration: const Duration(milliseconds: 300),
+                    child: Stack(
+                      children: [
+                        // Current conditions card
+                        Positioned(
+                          bottom: 0,
+                          left: 0,
+                          child: NowCardWrapper(future: conditionsFuture),
                         ),
-                      ),
-                    ],
+                        Positioned(
+                          top: 0,
+                          left: 0,
+                          child: CameraShotSelectionWrapper(
+                            future: availableCameraShots,
+                            notifier: cameraShotNotifier,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -191,9 +199,15 @@ class _SurfPageState extends State<SurfPage> {
   }
 }
 
+/// Enum representing the state of the user interface
 enum UiState {
+  /// Show the passive UI
   ambient,
+
+  /// Show upcoming beach forecasts
   forecast,
+
+  /// Hide UI for maximum visibility of the background
   blank;
 
   /// Gives the next state that should be shown after a touch

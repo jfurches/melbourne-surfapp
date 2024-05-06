@@ -14,6 +14,7 @@ class PanoramicBackground extends StatefulWidget {
   State<PanoramicBackground> createState() => _PanoramicBackgroundState();
 }
 
+// Todo: add vsync
 class _PanoramicBackgroundState extends State<PanoramicBackground> {
   Completer<ui.Image> imageCompleter = Completer<ui.Image>();
   ui.Image? image;

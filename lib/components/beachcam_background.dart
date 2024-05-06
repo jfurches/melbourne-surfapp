@@ -1,50 +1,47 @@
 import 'package:flutter/widgets.dart';
 
+import '../data/camera_shot.dart';
 import '../services/beachcam.dart';
 import 'pano_background.dart';
 
 class BeachCamBackground extends StatelessWidget {
   final CameraShot? shot;
-  final Widget child;
   final bool touchEnabled;
 
-  const BeachCamBackground(
-      {super.key, this.shot, required this.child, this.touchEnabled = true});
+  const BeachCamBackground({
+    super.key,
+    this.shot,
+    this.touchEnabled = true,
+  });
 
   Widget getForShot(CameraShot shot) {
     var image = Image.network(shot.url.toString());
 
     if (shot.isPanorama) {
-      return getPanoramaBackground(image, child);
+      return getPanoramaBackground(image);
     } else {
-      return getStaticBackground(image, child);
+      return getStaticBackground(image);
     }
   }
 
-  Widget getStaticBackground(Image image, Widget? child) {
+  Widget getStaticBackground(Image image) {
     return Container(
       decoration: BoxDecoration(
         image: DecorationImage(
-          image: image.image,
-          fit: BoxFit.cover,
-        ),
+            image: image.image,
+            fit: BoxFit.cover,
+            filterQuality: FilterQuality.medium),
       ),
-      child: child,
     );
   }
 
-  Widget getPanoramaBackground(Image image, Widget? child) {
-    return Stack(
-      children: [
-        PanoramicBackground(image: image, touchEnabled: touchEnabled),
-        Container(child: child),
-      ],
-    );
+  Widget getPanoramaBackground(Image image) {
+    return PanoramicBackground(image: image, touchEnabled: touchEnabled);
   }
 
   @override
   Widget build(BuildContext context) {
-    if (shot != null && shot!.url.hasAuthority) {
+    if (shot != null && shot!.url.hasAuthority && shot!.url.hasAbsolutePath) {
       return getForShot(shot!);
     } else {
       return Container(
@@ -54,7 +51,6 @@ class BeachCamBackground extends StatelessWidget {
             fit: BoxFit.cover,
           ),
         ),
-        child: child,
       );
     }
   }
