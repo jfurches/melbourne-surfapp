@@ -32,7 +32,7 @@ class SpringDragListener {
       }
 
       if (_simulation!.isDone(t)) {
-        _resetSimulation();
+        reset();
         return _x;
       }
 
@@ -46,9 +46,9 @@ class SpringDragListener {
     return _x;
   }
 
-  void _resetSimulation() {
+  void reset({double? newX}) {
     var t = (DateTime.now().difference(_lastTime)).inMilliseconds / 1000.0;
-    var newX = _simulation!.x(t);
+    newX ??= _simulation!.x(t);
     if (!newX.isNaN) {
       _x = newX.clamp(minX, maxX);
     }
@@ -60,7 +60,7 @@ class SpringDragListener {
   void onDragStart(DragStartDetails details) {
     // Switch to manual control
     if (_simulation != null) {
-      _resetSimulation();
+      reset();
     }
 
     _lastTime = DateTime.now();
@@ -77,7 +77,7 @@ class SpringDragListener {
 
   void onDragEnd(DragEndDetails details) {
     if (_simulation != null) {
-      _resetSimulation();
+      reset();
     }
 
     var v = 0.5 * _v + 0.5 * -(details.primaryVelocity ?? 0) / 1000;

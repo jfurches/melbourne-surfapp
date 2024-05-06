@@ -18,7 +18,7 @@ class PanoramicBackground extends StatefulWidget {
 
 class _PanoramicBackgroundState extends State<PanoramicBackground>
     with SingleTickerProviderStateMixin {
-  Completer<ui.Image> imageCompleter = Completer<ui.Image>();
+  var imageCompleter = Completer<ui.Image>();
   ui.Image? image;
   late Ticker ticker;
   final canvasKey = GlobalKey();
@@ -83,10 +83,7 @@ class _PanoramicBackgroundState extends State<PanoramicBackground>
     }
   }
 
-  @override
-  void initState() {
-    super.initState();
-
+  void _loadImage() {
     Completer<ui.Image> completer = Completer<ui.Image>();
     widget.image.image
         .resolve(const ImageConfiguration())
@@ -95,7 +92,17 @@ class _PanoramicBackgroundState extends State<PanoramicBackground>
     }));
 
     imageCompleter = completer;
-    completer.future.then((value) => setState(() => image = value));
+    completer.future.then((value) {
+      setState(() => image = value);
+      _dragListener.reset(newX: 0);
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+
+    _loadImage();
 
     ticker = createTicker((elapsed) {
       updatePosition();
@@ -107,6 +114,14 @@ class _PanoramicBackgroundState extends State<PanoramicBackground>
   void dispose() {
     ticker.dispose();
     super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(PanoramicBackground oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.image != oldWidget.image) {
+      _loadImage();
+    }
   }
 }
 
