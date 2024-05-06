@@ -1,8 +1,9 @@
 import 'package:flutter/widgets.dart';
+import 'package:surfapp/components/beachcam/static.dart';
 
-import '../data/camera_shot.dart';
-import '../services/beachcam.dart';
-import 'pano_background.dart';
+import '../../data/camera_shot.dart';
+import '../../services/beachcam.dart';
+import 'panoramic.dart';
 
 class BeachCamBackground extends StatelessWidget {
   final CameraShot? shot;
@@ -25,14 +26,16 @@ class BeachCamBackground extends StatelessWidget {
   }
 
   Widget getStaticBackground(Image image) {
-    return Container(
-      decoration: BoxDecoration(
-        image: DecorationImage(
-            image: image.image,
-            fit: BoxFit.cover,
-            filterQuality: FilterQuality.medium),
-      ),
-    );
+    // return Container(
+    //   decoration: BoxDecoration(
+    //     image: DecorationImage(
+    //         image: image.image,
+    //         fit: BoxFit.cover,
+    //         filterQuality: FilterQuality.medium),
+    //   ),
+    // );
+
+    return StaticBackground(image: image);
   }
 
   Widget getPanoramaBackground(Image image) {

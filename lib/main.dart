@@ -4,7 +4,7 @@ import 'package:async/async.dart';
 import 'package:flutter/material.dart';
 
 import 'cards/nowcard.dart';
-import 'components/beachcam_background.dart';
+import 'components/beachcam/background.dart';
 import 'components/camera_selector.dart';
 import 'components/forecast_widget.dart';
 import 'data/camera_shot.dart';

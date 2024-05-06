@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'dart:math';
 import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
-import 'package:surfapp/animation/springdrag.dart';
+
+import '../../animation/springdrag.dart';
 
 class PanoramicBackground extends StatefulWidget {
   final Image image;
