@@ -1,51 +1,30 @@
 import 'package:flutter/widgets.dart';
-import 'package:surfapp/components/beachcam/static.dart';
 
 import '../../data/camera_shot.dart';
-import '../../services/beachcam.dart';
 import 'panoramic.dart';
+import 'static.dart';
 
-class BeachCamBackground extends StatelessWidget {
-  final CameraShot? shot;
+class BeachCamBackground extends StatefulWidget {
+  final CameraShot shot;
   final bool touchEnabled;
 
   const BeachCamBackground({
     super.key,
-    this.shot,
+    required this.shot,
     this.touchEnabled = true,
   });
 
-  Widget getForShot(CameraShot shot) {
-    var image = Image.network(shot.url.toString());
+  @override
+  State<StatefulWidget> createState() => BeachCamBackgroundState();
+}
 
-    if (shot.isPanorama) {
-      return getPanoramaBackground(image);
-    } else {
-      return getStaticBackground(image);
-    }
-  }
-
-  Widget getStaticBackground(Image image) {
-    // return Container(
-    //   decoration: BoxDecoration(
-    //     image: DecorationImage(
-    //         image: image.image,
-    //         fit: BoxFit.cover,
-    //         filterQuality: FilterQuality.medium),
-    //   ),
-    // );
-
-    return StaticBackground(image: image);
-  }
-
-  Widget getPanoramaBackground(Image image) {
-    return PanoramicBackground(image: image, touchEnabled: touchEnabled);
-  }
+class BeachCamBackgroundState extends State<BeachCamBackground> {
+  CameraShot lastRealShot = CameraShot.none;
 
   @override
   Widget build(BuildContext context) {
-    if (shot != null && shot!.url.hasAuthority && shot!.url.hasAbsolutePath) {
-      return getForShot(shot!);
+    if (lastRealShot.isReal) {
+      return getForShot(lastRealShot);
     } else {
       return Container(
         decoration: const BoxDecoration(
@@ -55,6 +34,35 @@ class BeachCamBackground extends StatelessWidget {
           ),
         ),
       );
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    processShot(widget.shot);
+  }
+
+  @override
+  void didUpdateWidget(BeachCamBackground oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    processShot(widget.shot);
+  }
+
+  void processShot(CameraShot shot) {
+    if (shot.isReal && shot != lastRealShot) {
+      setState(() => lastRealShot = shot);
+    }
+  }
+
+  Widget getForShot(CameraShot shot) {
+    var image = Image.network(shot.url.toString());
+
+    if (shot.isPanorama) {
+      return PanoramicBackground(
+          image: image, touchEnabled: widget.touchEnabled);
+    } else {
+      return StaticBackground(image: image);
     }
   }
 }

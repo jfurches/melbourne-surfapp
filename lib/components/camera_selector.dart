@@ -142,11 +142,9 @@ class CameraShotSelectorState extends State<CameraShotSelector> {
   /// This notifies the holder of the [widget.notifier].
   void refreshCameraShots() {
     refreshTask = CancelableOperation.fromFuture(BeachCamService().getShots())
-      ..then((newShots) => {setState(() => availableShots = newShots)})
       ..then((newShots) {
-        if (selectedShot.isAuto) {
-          widget.notifier?.value = BeachCamService().pickBestShot(newShots);
-        }
+        setState(() => availableShots = newShots);
+        selectedShot.resolve().then((value) => widget.notifier?.value = value);
       });
   }
 
@@ -157,7 +155,9 @@ class CameraShotSelectorState extends State<CameraShotSelector> {
       showList = false;
     });
 
-    widget.notifier?.value = shot;
+    shot.resolve().then((value) {
+      widget.notifier?.value = value;
+    });
   }
 
   /// Get a list of choices for the user to pick, excluding
