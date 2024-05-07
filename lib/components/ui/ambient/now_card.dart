@@ -1,17 +1,29 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
 
-import '../components/statefulfuturebuilder.dart';
-import '../data/beachconditions.dart';
+import '../../../data/beachconditions.dart';
+import '../../../services/surfguru.dart';
 
-class NowCard extends StatelessWidget {
-  final BeachConditions beachConditions;
+/// Card showing current beach conditions
+class NowCard extends StatefulWidget {
+  const NowCard({super.key});
 
-  const NowCard({required this.beachConditions, super.key});
+  @override
+  NowCardState createState() => NowCardState();
+}
+
+class NowCardState extends State<NowCard> {
+  BeachConditions? beachConditions;
+  late Timer updateTimer;
 
   @override
   Widget build(BuildContext context) {
+    if (beachConditions == null) {
+      return const CircularProgressIndicator();
+    }
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(8.0),
@@ -28,10 +40,10 @@ class NowCard extends StatelessWidget {
               _row(
                 Icons.air,
                 Colors.green.shade200,
-                "${beachConditions.wind.speed.toInt()} mph",
+                "${beachConditions!.wind.speed.toInt()} mph",
                 extra: Transform.rotate(
                   // Transform rotates CW for some odd reason
-                  angle: -beachConditions.wind.angle * pi / 180,
+                  angle: -beachConditions!.wind.angle * pi / 180,
                   child: Icon(Icons.arrow_right_alt,
                       color: Colors.green.shade200, size: 30),
                 ),
@@ -39,17 +51,17 @@ class NowCard extends StatelessWidget {
               _row(
                 Icons.thermostat,
                 Colors.pink.shade300,
-                _formatTemperature(beachConditions.airTemperature),
+                _formatTemperature(beachConditions!.airTemperature),
               ),
               _row(
                 Icons.water,
                 Colors.blue.shade300,
-                _formatTemperature(beachConditions.waterTemperature),
+                _formatTemperature(beachConditions!.waterTemperature),
               ),
               _row(
                 Icons.sunny,
                 Colors.yellow.shade300,
-                beachConditions.uvIndex?.toString() ?? 'N/A',
+                beachConditions!.uvIndex?.toString() ?? 'N/A',
               ),
             ],
           ),
@@ -58,8 +70,27 @@ class NowCard extends StatelessWidget {
     );
   }
 
+  @override
+  void initState() {
+    super.initState();
+    update();
+    updateTimer = Timer.periodic(const Duration(minutes: 1), (_) => update());
+  }
+
+  @override
+  void dispose() {
+    updateTimer.cancel();
+    super.dispose();
+  }
+
+  void update() {
+    Surfguru()
+        .getCurrentConditions()
+        .then((v) => setState(() => beachConditions = v));
+  }
+
   String _formatSurf() {
-    var surf = beachConditions.surf;
+    var surf = beachConditions!.surf;
     if (surf - surf.floor() > 0) {
       return "${surf.floor()}-${surf.ceil()} ft";
     }
@@ -83,30 +114,5 @@ class NowCard extends StatelessWidget {
     }
 
     return Row(children: elements);
-  }
-}
-
-class NowCardWrapper extends StatelessWidget {
-  final Future<BeachConditions> future;
-
-  const NowCardWrapper({required this.future, super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return StatefulFutureBuilder<BeachConditions>(
-      initialFuture: future,
-      builder: (context, snapshot, oldData) {
-        BeachConditions? data = oldData;
-        if (snapshot.hasData && snapshot.data != null) {
-          data = snapshot.data;
-        }
-
-        if (data != null) {
-          return NowCard(beachConditions: data);
-        }
-
-        return const CircularProgressIndicator();
-      },
-    );
   }
 }

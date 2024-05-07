@@ -3,7 +3,7 @@ import 'dart:math';
 import 'package:equations/equations.dart' show Complex, Cubic;
 import 'package:flutter/material.dart' hide Cubic;
 
-import '../util.dart';
+import '../../../util.dart';
 
 class GraphWidget extends StatelessWidget {
   final Color color;

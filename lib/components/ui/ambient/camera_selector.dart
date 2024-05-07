@@ -1,24 +1,20 @@
-import 'dart:async';
-
-import 'package:async/async.dart';
 import 'package:flutter/material.dart';
-import 'package:surfapp/util.dart';
 
-import '../data/camera_shot.dart';
-import '../services/beachcam.dart';
+import '../../../data/camera_controller.dart';
+import '../../../data/camera_shot.dart';
+import '../../../util.dart';
 
 /// Widget that allows the user to pick a [CameraShot] from
-/// the available shots given by the [BeachCamService].
+/// the [CameraController].
 ///
 /// It features a floating action button that, when pressed, shows
 /// a list of available options. If the user picks one, it notifies
-/// any widgets holding the [ValueNotifier] of this widget, then hides
-/// the list.
+/// the [controller], then hides the list.
 class CameraShotSelector extends StatefulWidget {
-  /// Notifier that gets user selected camera shot
-  final ValueNotifier<CameraShot>? notifier;
+  /// Camera controller
+  final CameraController controller;
 
-  const CameraShotSelector({super.key, this.notifier});
+  const CameraShotSelector({super.key, required this.controller});
 
   @override
   State<StatefulWidget> createState() => CameraShotSelectorState();
@@ -29,20 +25,8 @@ class CameraShotSelectorState extends State<CameraShotSelector> {
   /// the user to pick
   var showList = false;
 
-  /// All available camera shots
-  var availableShots = <CameraShot>[];
-
-  /// The particular shot selected by the user
-  var selectedShot = CameraShot.auto;
-
-  /// The task of refreshing our camera shots
-  var refreshTask = CancelableOperation.fromValue(<CameraShot>[]);
-
-  /// Timer for refreshing our camera shots
-  late final Timer refreshTimer;
-
-  /// Key for the floating action button
-  var buttonKey = GlobalKey();
+  late dynamic Function() _newShotsClosure;
+  late dynamic Function() _newActiveShotClosure;
 
   @override
   Widget build(BuildContext context) {
@@ -57,7 +41,6 @@ class CameraShotSelectorState extends State<CameraShotSelector> {
               width: 60,
               height: 60,
               child: FloatingActionButton(
-                key: buttonKey,
                 elevation: 0,
                 backgroundColor: Theme.of(context).cardColor,
                 hoverElevation: 0,
@@ -74,7 +57,7 @@ class CameraShotSelectorState extends State<CameraShotSelector> {
             Visibility(
               visible: showList,
               child: Text(
-                selectedShot.name,
+                widget.controller.activeShot.name,
                 style: TextStyle(
                   fontSize: 24,
                   color: Theme.of(context).colorScheme.inverseSurface,
@@ -92,15 +75,16 @@ class CameraShotSelectorState extends State<CameraShotSelector> {
               Column(
                 crossAxisAlignment:
                     CrossAxisAlignment.start, // Left-align choices
-                children: getChoices()
+                children: getChoices(widget.controller.availableShots)
                     .map(
                       (choice) => TextButton(
-                        onPressed: () => chooseShot(choice),
+                        onPressed: () => selectShot(choice),
                         style: ButtonStyle(
-                            backgroundColor:
-                                MaterialStateProperty.resolveWith<Color?>(
-                                    (states) =>
-                                        Theme.of(context).colorScheme.surface)),
+                          backgroundColor:
+                              MaterialStateProperty.resolveWith<Color?>(
+                            (states) => Theme.of(context).colorScheme.surface,
+                          ),
+                        ),
                         child: Text(
                           choice.name,
                           style: TextStyle(
@@ -120,68 +104,22 @@ class CameraShotSelectorState extends State<CameraShotSelector> {
     );
   }
 
-  @override
-  void initState() {
-    super.initState();
-    selectedShot = widget.notifier?.value ?? CameraShot.auto;
-    refreshCameraShots();
-    refreshTimer =
-        Timer.periodic(const Duration(minutes: 1), (_) => refreshCameraShots());
-  }
-
-  @override
-  void dispose() {
-    refreshTask.cancel();
-    refreshTimer.cancel();
-    super.dispose();
-  }
-
-  /// Refreshes the list of available camera shots from the [BeachCamService],
-  /// and also picks the best one if [selectedShot] is [CameraShot.auto].
-  ///
-  /// This notifies the holder of the [widget.notifier].
-  void refreshCameraShots() {
-    refreshTask = CancelableOperation.fromFuture(BeachCamService().getShots())
-      ..then((newShots) {
-        setState(() => availableShots = newShots);
-        selectedShot.resolve().then((value) => widget.notifier?.value = value);
-      });
-  }
-
   /// Callback for when the user picks a camera shot
-  void chooseShot(CameraShot shot) {
-    setState(() {
-      selectedShot = shot;
-      showList = false;
-    });
-
-    shot.resolve().then((value) {
-      widget.notifier?.value = value;
-    });
+  void selectShot(CameraShot shot) {
+    setState(() => showList = false);
+    widget.controller.activeShot = shot;
   }
 
   /// Get a list of choices for the user to pick, excluding
-  /// the currently selected one and any shots that are older
-  /// than an hour.
-  List<CameraShot> getChoices() {
-    List<CameraShot> choices = [];
-
-    if (!selectedShot.isAuto) {
-      choices.add(CameraShot.auto);
-    }
-
-    var now = DateTime.now();
-    for (var shot in availableShots) {
-      if (selectedShot.name != shot.name &&
-          now.difference(shot.time) < const Duration(hours: 1)) {
-        choices.add(shot);
-      }
-    }
-
-    if (choices.length <= 1) {
+  /// the currently selected one
+  List<CameraShot> getChoices(List<CameraShot> availableShots) {
+    if (availableShots.length <= 1) {
       return [];
     }
 
+    var choices = availableShots
+        .where((s) => s.name != widget.controller.activeShot.name)
+        .toList();
     choices.sort(compareShots);
     return choices;
   }
@@ -206,5 +144,30 @@ class CameraShotSelectorState extends State<CameraShotSelector> {
     } else {
       return a.name.compareTo(b.name);
     }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _newShotsClosure =
+        widget.controller.onNewShotsAvailable(onNewShotsAvailable);
+    _newActiveShotClosure =
+        widget.controller.onActiveShotChange(onNewActiveShot);
+  }
+
+  @override
+  void dispose() {
+    widget.controller.availableShotsNotifier
+        .removeListener(_newActiveShotClosure);
+    widget.controller.resolvedShotNotifier.removeListener(_newShotsClosure);
+    super.dispose();
+  }
+
+  void onNewActiveShot(CameraShot newShot) {
+    setState(() {/* Potentially new selection */});
+  }
+
+  void onNewShotsAvailable(List<CameraShot> newShots) {
+    setState(() {/* New shots available, redraw choices */});
   }
 }

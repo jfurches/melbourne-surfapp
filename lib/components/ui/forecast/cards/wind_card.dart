@@ -2,10 +2,10 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
-import '../components/graph.dart';
-import '../data/beachforecast.dart';
-import '../util.dart';
-import 'graphcard.dart';
+import '../graph.dart';
+import '../../../../data/beachforecast.dart';
+import '../../../../util.dart';
+import 'graph_card.dart';
 
 class WindCard extends StatelessWidget {
   final BeachForecast beachConditions;

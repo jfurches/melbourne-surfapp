@@ -1,16 +1,17 @@
 import 'package:flutter/widgets.dart';
 
+import '../../data/camera_controller.dart';
 import '../../data/camera_shot.dart';
 import 'panoramic.dart';
 import 'static.dart';
 
 class BeachCamBackground extends StatefulWidget {
-  final CameraShot shot;
+  final CameraController controller;
   final bool touchEnabled;
 
   const BeachCamBackground({
     super.key,
-    required this.shot,
+    required this.controller,
     this.touchEnabled = true,
   });
 
@@ -19,12 +20,13 @@ class BeachCamBackground extends StatefulWidget {
 }
 
 class BeachCamBackgroundState extends State<BeachCamBackground> {
-  CameraShot lastRealShot = CameraShot.none;
+  late Function() _closure;
 
   @override
   Widget build(BuildContext context) {
-    if (lastRealShot.isReal) {
-      return getForShot(lastRealShot);
+    var shot = widget.controller.resolvedShot;
+    if (shot.isReal) {
+      return getForShot(shot);
     } else {
       return Container(
         decoration: const BoxDecoration(
@@ -40,19 +42,17 @@ class BeachCamBackgroundState extends State<BeachCamBackground> {
   @override
   void initState() {
     super.initState();
-    processShot(widget.shot);
+    _closure = widget.controller.onActiveShotChange(onNewShot);
   }
 
   @override
-  void didUpdateWidget(BeachCamBackground oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    processShot(widget.shot);
+  void dispose() {
+    widget.controller.resolvedShotNotifier.removeListener(_closure);
+    super.dispose();
   }
 
-  void processShot(CameraShot shot) {
-    if (shot.isReal && shot != lastRealShot) {
-      setState(() => lastRealShot = shot);
-    }
+  void onNewShot(CameraShot shot) {
+    setState(() {});
   }
 
   Widget getForShot(CameraShot shot) {

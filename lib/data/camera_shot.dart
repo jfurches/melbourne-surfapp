@@ -1,5 +1,3 @@
-import '../services/beachcam.dart';
-
 class CameraShot {
   final String name;
   final Uri url;
@@ -11,23 +9,15 @@ class CameraShot {
   bool get isAuto => name == "Auto";
   bool get isReal => url.toString().isNotEmpty;
 
-  Future<CameraShot> resolve() async {
-    if (isAuto) {
-      var realShot =
-          BeachCamService().pickBestShot(await BeachCamService().getShots());
-      return CameraShot("Auto", realShot.url, realShot.time);
-    }
-
-    return this;
-  }
-
   static CameraShot get none =>
       CameraShot("", Uri(), DateTime.fromMillisecondsSinceEpoch(0));
   static CameraShot get auto => CameraShot("Auto", Uri(), DateTime.now());
 
   @override
   bool operator ==(covariant CameraShot other) {
-    if (isAuto && other.isAuto) {
+    // Two Auto shots should only be equal if they're both virtual,
+    // as otherwise the url field could have changed.
+    if ((isAuto && other.isAuto) && !(isReal || other.isReal)) {
       return true;
     }
 

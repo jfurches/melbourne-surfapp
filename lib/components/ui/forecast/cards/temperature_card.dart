@@ -1,24 +1,26 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:surfapp/util.dart';
 
-import '../components/graph.dart';
-import '../data/beachforecast.dart';
-import 'graphcard.dart';
+import '../graph.dart';
+import '../../../../data/beachforecast.dart';
+import '../../../../util.dart';
+import 'graph_card.dart';
 
-class SurfCard extends StatelessWidget {
+final numberPattern = RegExp(r"\d+");
+
+class TemperatureCard extends StatelessWidget {
   final BeachForecast beachConditions;
-  const SurfCard({super.key, required this.beachConditions});
+  const TemperatureCard({super.key, required this.beachConditions});
 
   @override
   Widget build(BuildContext context) {
     return GraphCard(
-      title: "Surf Height",
-      iconData: Icons.tsunami,
-      iconColor: Colors.cyan.shade300,
+      title: "Temperature",
+      iconData: Icons.thermostat,
+      iconColor: Colors.pink.shade300,
       graph: GraphWidget(
-        color: Colors.cyan.shade300,
+        color: Colors.pink.shade300,
         series: getSeries(),
         currentPoint: currentTime(),
       ),
@@ -28,21 +30,21 @@ class SurfCard extends StatelessWidget {
   Series getSeries() {
     List<(double, double)> data = [];
     var hours = beachConditions.times.map((t) => t.hour).toList();
-    var waves = beachConditions.surf;
+    var temps = beachConditions.weather.map((w) => w.temperature).toList();
 
     for (var i = 0; i < hours.length; i++) {
-      data.add((hours[i] * 1.0, waves[i]));
+      data.add((hours[i] * 1.0, temps[i]));
     }
 
     var xLabels = beachConditions.times.map(displayTime).toList();
     var xValues = hours.map((h) => h * 1.0).toList();
-    var yValues = [waves.reduce(min), waves.reduce(max)];
+    var yValues = [temps.reduce(min), temps.reduce(max)];
 
     return Series(
       data: data,
       xValues: xValues,
       xLabels: xLabels,
-      // yLabels: yValues.map((e) => e.toInt().toString()).toList(),
+      yLabels: yValues.map((e) => e.toInt().toString()).toList(),
       yValues: yValues,
     );
   }
