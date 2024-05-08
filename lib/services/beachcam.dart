@@ -84,6 +84,7 @@ class BeachCamService {
       shots.add(CameraShot(name, Uri.https(dataUrl.authority, uriPath), time));
     }
 
+    _lastRefresh = DateTime.now();
     _cameraShots = shots;
   }
 

@@ -12,19 +12,19 @@ class Surfguru {
   factory Surfguru() => _instance;
 
   final Duration refreshAfter = const Duration(minutes: 5);
-  final DateTime lastUpdated = DateTime.now();
+  DateTime _lastUpdated = DateTime.now();
 
   BeachForecast? _currentForecast;
   BeachConditions? _currentConditions;
 
-  bool get shouldRefresh =>
+  bool shouldRefresh() =>
       _currentForecast == null ||
-      DateTime.now().isAfter(lastUpdated.add(refreshAfter));
+      DateTime.now().isAfter(_lastUpdated.add(refreshAfter));
 
   Surfguru._internal();
 
   Future<BeachConditions> getCurrentConditions() async {
-    if (shouldRefresh) {
+    if (shouldRefresh()) {
       await _refresh();
     }
 
@@ -32,7 +32,7 @@ class Surfguru {
   }
 
   Future<BeachForecast> getForecast() async {
-    if (shouldRefresh) {
+    if (shouldRefresh()) {
       await _refresh();
     }
 
@@ -61,6 +61,8 @@ class Surfguru {
     if (currentDay != null) {
       _currentForecast = _parseForecast(currentDay);
     }
+
+    _lastUpdated = DateTime.now();
   }
 
   BeachConditions _parseConditions(Element currentStatus) {
