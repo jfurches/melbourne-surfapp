@@ -60,8 +60,7 @@ class CameraController {
   /// Fills in the passed shot with the best shot if it's Auto
   CameraShot resolve(CameraShot shot) {
     if (shot.isAuto && !shot.isReal) {
-      var _bestShot = bestShot;
-      return CameraShot("Auto", _bestShot.url, _bestShot.time);
+      return CameraShot("Auto", bestShot.url, bestShot.time);
     }
 
     return shot;
