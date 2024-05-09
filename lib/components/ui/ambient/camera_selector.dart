@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../data/camera_controller.dart';
@@ -25,8 +27,8 @@ class CameraShotSelectorState extends State<CameraShotSelector> {
   /// the user to pick
   var showList = false;
 
-  late dynamic Function() _newShotsClosure;
-  late dynamic Function() _newActiveShotClosure;
+  late StreamSubscription<CameraShot> _activeShotSubscription;
+  late StreamSubscription<List<CameraShot>> _availableCamerasSubscription;
 
   @override
   Widget build(BuildContext context) {
@@ -149,17 +151,16 @@ class CameraShotSelectorState extends State<CameraShotSelector> {
   @override
   void initState() {
     super.initState();
-    _newShotsClosure =
+    _availableCamerasSubscription =
         widget.controller.onNewShotsAvailable(onNewShotsAvailable);
-    _newActiveShotClosure =
+    _activeShotSubscription =
         widget.controller.onActiveShotChange(onNewActiveShot);
   }
 
   @override
   void dispose() {
-    widget.controller.availableShotsNotifier
-        .removeListener(_newActiveShotClosure);
-    widget.controller.resolvedShotNotifier.removeListener(_newShotsClosure);
+    _availableCamerasSubscription.cancel();
+    _activeShotSubscription.cancel();
     super.dispose();
   }
 

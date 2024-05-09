@@ -1,7 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
-
 import '../services/beachcam.dart';
 import 'camera_shot.dart';
 
@@ -9,14 +7,14 @@ import 'camera_shot.dart';
 class CameraController {
   final excludeAfter = const Duration(minutes: 30);
 
-  /// Value notifier for when new shots are selected
-  final resolvedShotNotifier = ValueNotifier(CameraShot.auto);
+  /// Stream for when new shots are selected
+  final _activeShotStream = StreamController<CameraShot>.broadcast();
 
   /// Currently active shot after resolving
   var _activeShot = CameraShot.auto;
 
-  /// Notifier for available shots
-  final availableShotsNotifier = ValueNotifier(<CameraShot>[]);
+  /// Stream for available shots
+  final _availableShotsStream = StreamController<List<CameraShot>>.broadcast();
 
   /// List of available shots
   final _availableShots = <CameraShot>[];
@@ -42,7 +40,7 @@ class CameraController {
   /// This won't update if the passed shot is the same
   set activeShot(CameraShot shot) {
     _activeShot = shot;
-    resolvedShotNotifier.value = resolvedShot;
+    _activeShotStream.add(resolvedShot);
   }
 
   /// Returns the best shot (used by Auto mode)
@@ -66,16 +64,14 @@ class CameraController {
     return shot;
   }
 
-  dynamic Function() onActiveShotChange(Function(CameraShot) callback) {
-    closure() => callback(resolvedShotNotifier.value);
-    resolvedShotNotifier.addListener(closure);
-    return closure;
+  StreamSubscription<CameraShot> onActiveShotChange(
+      Function(CameraShot) callback) {
+    return _activeShotStream.stream.listen(callback);
   }
 
-  dynamic Function() onNewShotsAvailable(Function(List<CameraShot>) callback) {
-    closure() => callback(availableShotsNotifier.value);
-    availableShotsNotifier.addListener(closure);
-    return closure;
+  StreamSubscription<List<CameraShot>> onNewShotsAvailable(
+      Function(List<CameraShot>) callback) {
+    return _availableShotsStream.stream.listen(callback);
   }
 
   /// Shot ranking algorithm, used for Auto mode
@@ -132,7 +128,7 @@ class CameraController {
     _availableShots.addAll(newShots);
 
     // Let all observers know we have a fresh batch of shots
-    availableShotsNotifier.value = _availableShots;
+    _availableShotsStream.add(_availableShots);
 
     // Update the selected shot. Using the activeShot setter should
     // notify any listeners
@@ -154,9 +150,10 @@ class CameraController {
     }
   }
 
+  /// Closes all resources
   void dispose() {
-    resolvedShotNotifier.dispose();
-    availableShotsNotifier.dispose();
+    _activeShotStream.close();
+    _availableShotsStream.close();
     _refreshTimer.cancel();
   }
 }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 
 import '../../data/camera_controller.dart';
@@ -20,7 +22,7 @@ class BeachCamBackground extends StatefulWidget {
 }
 
 class BeachCamBackgroundState extends State<BeachCamBackground> {
-  late Function() _closure;
+  late StreamSubscription<CameraShot> _subscription;
 
   @override
   Widget build(BuildContext context) {
@@ -42,12 +44,12 @@ class BeachCamBackgroundState extends State<BeachCamBackground> {
   @override
   void initState() {
     super.initState();
-    _closure = widget.controller.onActiveShotChange(onNewShot);
+    _subscription = widget.controller.onActiveShotChange(onNewShot);
   }
 
   @override
   void dispose() {
-    widget.controller.resolvedShotNotifier.removeListener(_closure);
+    _subscription.cancel();
     super.dispose();
   }
 
