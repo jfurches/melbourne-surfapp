@@ -51,7 +51,7 @@ class GraphPainter extends CustomPainter {
   final double currentPoint;
   final Series series;
 
-  late final CubicSpline curve;
+  late final Interpolation curve;
 
   GraphPainter({
     required this.color,
@@ -63,7 +63,8 @@ class GraphPainter extends CustomPainter {
     var ys = normalized
         .map((e) => 1 - e.$2)
         .toList(); // This flips the graph upside down
-    curve = CubicSpline(xs, ys);
+    // curve = CubicSpline(xs, ys);
+    curve = ExponentialSmoothing(xs, ys);
   }
 
   @override
@@ -209,7 +210,77 @@ class Series {
   }
 }
 
-class CubicSpline {
+abstract class Interpolation {
+  double compute(double x);
+}
+
+class ExponentialSmoothing implements Interpolation {
+  final double alpha;
+  final double dx;
+  late final List<double> xs;
+  late final List<double> ys;
+
+  ExponentialSmoothing(List<double> xs, List<double> ys,
+      {this.alpha = 0.25, this.dx = 0.01}) {
+    if (xs.length != ys.length) {
+      throw ArgumentError("xs and ys must have the same length.");
+    }
+
+    _computeCurve(xs, ys);
+  }
+
+  @override
+  double compute(double x) {
+    return _lerp(x);
+  }
+
+  double _lerp(double x, {List<double>? xs, List<double>? ys}) {
+    xs ??= this.xs;
+    ys ??= this.ys;
+
+    if (x < xs.first || x > xs.last) {
+      return 0.0;
+    }
+
+    var i = _findIndex(x, xs: xs);
+
+    if (i == xs.length - 1) {
+      return ys[i];
+    }
+
+    var t = (x - xs[i]) / (xs[i + 1] - xs[i]);
+    return (1 - t) * ys[i] + t * ys[i + 1];
+  }
+
+  int _findIndex(double x, {List<double>? xs}) {
+    xs ??= this.xs;
+
+    for (var i = 0; i < xs.length - 1; i++) {
+      if (x >= xs[i] && x <= xs[i + 1]) {
+        return i;
+      }
+    }
+
+    return -1;
+  }
+
+  void _computeCurve(List<double> xs, List<double> ys) {
+    this.xs = [];
+    this.ys = [];
+
+    var x = xs.first;
+    var y = ys.first;
+    while (x < xs.last) {
+      this.xs.add(x);
+      var yPrime = _lerp(x, xs: xs, ys: ys);
+      y = alpha * yPrime + (1 - alpha) * y;
+      this.ys.add(y);
+      x += dx;
+    }
+  }
+}
+
+class CubicSpline implements Interpolation {
   final List<double> xs;
   final List<double> ys;
 
@@ -223,10 +294,11 @@ class CubicSpline {
     _computeSplines();
   }
 
+  @override
   double compute(double x) {
     int index = _findIndex(x);
     double t = (x - xs[index]);
-    return max(0.01, min(0.99, _splines[index].realEvaluateOn(t).real));
+    return _splines[index].realEvaluateOn(t).real.clamp(0.01, 0.99);
   }
 
   // double _getDerivative(int i) {

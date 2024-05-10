@@ -5,7 +5,7 @@ import 'camera_shot.dart';
 
 /// Controller that manages the active camera and available shots
 class CameraController {
-  final excludeAfter = const Duration(minutes: 30);
+  var _excludeAfter = const Duration(minutes: 30);
 
   /// Stream for when new shots are selected
   final _activeShotStream = StreamController<CameraShot>.broadcast();
@@ -41,6 +41,13 @@ class CameraController {
   set activeShot(CameraShot shot) {
     _activeShot = shot;
     _activeShotStream.add(resolvedShot);
+  }
+
+  Duration get maximumShotAge => _excludeAfter;
+
+  set maximumShotAge(Duration value) {
+    _excludeAfter = value;
+    _refresh();
   }
 
   /// Returns the best shot (used by Auto mode)
@@ -103,7 +110,9 @@ class CameraController {
     // points += s.name.contains("North") ? 1 : 0;
     // points += s.name.contains("Zoom") ? 1 : 0;
     points += shot.isPanorama ? 0 : 1;
-    var multiplier = (1 - DateTime.now().difference(shot.time).inMinutes / 60)
+    var multiplier = (1 -
+            DateTime.now().difference(shot.time).inMinutes /
+                maximumShotAge.inMinutes)
         .clamp(0.0, 1.0);
     return multiplier * points;
   }
@@ -119,7 +128,7 @@ class CameraController {
     _newestValidCameraShot = fetchedShots.last;
 
     var newShots = fetchedShots
-        .where((s) => now.difference(s.time) < excludeAfter)
+        .where((s) => now.difference(s.time) < maximumShotAge)
         .toList();
 
     if (newShots.length >= 2) {
