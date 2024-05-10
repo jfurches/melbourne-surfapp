@@ -1,3 +1,4 @@
+import 'dart:isolate';
 import 'dart:math';
 
 import 'package:equations/equations.dart' show Complex, Cubic;
@@ -82,15 +83,17 @@ class GraphPainter extends CustomPainter {
     //   Paint()..color = Colors.grey.withOpacity(0.5),
     // );
 
+    double compute(double x) => curve.compute(x).clamp(0.01, 0.99);
+
     const dx = 0.01;
     var x = 0.0;
 
     if (currentPoint > 0) {
       var beforePath = Path();
-      beforePath.moveTo(x * size.width, curve.compute(x) * size.height);
+      beforePath.moveTo(x * size.width, compute(x) * size.height);
       while (x <= min(currentPoint + dx, 1)) {
         var px = x * size.width;
-        var py = curve.compute(x) * size.height;
+        var py = compute(x) * size.height;
         beforePath.lineTo(px, py);
         x += dx;
       }
@@ -107,10 +110,11 @@ class GraphPainter extends CustomPainter {
     if (currentPoint <= 1) {
       var afterPath = Path();
       x = max(0, currentPoint);
-      afterPath.moveTo(x * size.width, curve.compute(x) * size.height);
+      afterPath.moveTo(
+          x * size.width, compute(x).clamp(0.01, 0.99) * size.height);
       while (x <= 1.0) {
         var px = x * size.width;
-        var py = curve.compute(x) * size.height;
+        var py = compute(x).clamp(0.01, 0.99) * size.height;
         afterPath.lineTo(px, py);
         x += dx;
       }
@@ -131,15 +135,13 @@ class GraphPainter extends CustomPainter {
         ..style = PaintingStyle.fill;
 
       canvas.drawCircle(
-        Offset(currentPoint * size.width,
-            curve.compute(currentPoint) * size.height),
+        Offset(currentPoint * size.width, compute(currentPoint) * size.height),
         7,
         paint,
       );
 
       canvas.drawCircle(
-        Offset(currentPoint * size.width,
-            curve.compute(currentPoint) * size.height),
+        Offset(currentPoint * size.width, compute(currentPoint) * size.height),
         13,
         paint..color = color.withOpacity(0.2),
       );
@@ -217,8 +219,8 @@ abstract class Interpolation {
 class ExponentialSmoothing implements Interpolation {
   final double alpha;
   final double dx;
-  late final List<double> xs;
-  late final List<double> ys;
+  final List<double> xs = [];
+  final List<double> ys = [];
 
   ExponentialSmoothing(List<double> xs, List<double> ys,
       {this.alpha = 0.25, this.dx = 0.01}) {
@@ -226,7 +228,12 @@ class ExponentialSmoothing implements Interpolation {
       throw ArgumentError("xs and ys must have the same length.");
     }
 
-    _computeCurve(xs, ys);
+    // Compute curve in a separate process to avoid slowing
+    // down the main ui
+    Isolate.run(() => _computeCurve(xs, ys)).then((result) {
+      this.xs.addAll(result.$1);
+      this.ys.addAll(result.$2);
+    });
   }
 
   @override
@@ -238,15 +245,17 @@ class ExponentialSmoothing implements Interpolation {
     xs ??= this.xs;
     ys ??= this.ys;
 
-    if (x < xs.first || x > xs.last) {
-      return 0.0;
+    if (xs.isEmpty || ys.isEmpty) {
+      return 0;
+    }
+
+    if (x <= xs.first) {
+      return ys.first;
+    } else if (x >= xs.last) {
+      return ys.last;
     }
 
     var i = _findIndex(x, xs: xs);
-
-    if (i == xs.length - 1) {
-      return ys[i];
-    }
 
     var t = (x - xs[i]) / (xs[i + 1] - xs[i]);
     return (1 - t) * ys[i] + t * ys[i + 1];
@@ -256,7 +265,7 @@ class ExponentialSmoothing implements Interpolation {
     xs ??= this.xs;
 
     for (var i = 0; i < xs.length - 1; i++) {
-      if (x >= xs[i] && x <= xs[i + 1]) {
+      if (x >= xs[i] && x < xs[i + 1]) {
         return i;
       }
     }
@@ -264,19 +273,21 @@ class ExponentialSmoothing implements Interpolation {
     return -1;
   }
 
-  void _computeCurve(List<double> xs, List<double> ys) {
-    this.xs = [];
-    this.ys = [];
+  (List<double>, List<double>) _computeCurve(List<double> xs, List<double> ys) {
+    var newX = <double>[];
+    var newY = <double>[];
 
     var x = xs.first;
     var y = ys.first;
     while (x < xs.last) {
-      this.xs.add(x);
+      newX.add(x);
       var yPrime = _lerp(x, xs: xs, ys: ys);
       y = alpha * yPrime + (1 - alpha) * y;
-      this.ys.add(y);
+      newY.add(y);
       x += dx;
     }
+
+    return (newX, newY);
   }
 }
 
@@ -298,7 +309,7 @@ class CubicSpline implements Interpolation {
   double compute(double x) {
     int index = _findIndex(x);
     double t = (x - xs[index]);
-    return _splines[index].realEvaluateOn(t).real.clamp(0.01, 0.99);
+    return _splines[index].realEvaluateOn(t).real;
   }
 
   // double _getDerivative(int i) {
